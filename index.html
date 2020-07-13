@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <title>GB Covid dash WIP</title>
+
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+
+    <link
+      rel="stylesheet"
+      href="https://js.arcgis.com/4.15/esri/themes/light/main.css"
+    />
+    <script src="https://js.arcgis.com/4.15/"></script>
+
+    <script>
+require([
+    "esri/Graphic",
+    "esri/Map",
+    "esri/layers/GeoJSONLayer",
+    "esri/layers/support/Field",
+    "esri/views/MapView",
+    "esri/widgets/Expand",
+    "esri/widgets/Home",
+    "esri/widgets/Legend",
+    "esri/widgets/Search",
+    "esri/widgets/Zoom"
+
+], function(Graphic, Map, GeoJSONLayer, Field, MapView, Expand, Home, Legend, Search, Zoom) {
+    // If GeoJSON files are not on the same domain as your website, a CORS enabled server
+    // or a proxy is required.
+
+
+    // Paste the url into a browser's address bar to download and view the attributes
+    // in the GeoJSON file. These attributes include:
+    // * mag - magnitude
+    // * type - earthquake or other event such as nuclear test
+    // * place - location of the event
+    // * time - the time of the event
+    // Use the Arcade Date() function to format time field into a human-readable format
+
+    const template = {
+        title: "{LAD12NM_EDIT}",
+        outFields: ["*"],
+        content: getPopupDetails,
+        // content: "{LAD12NM_EDIT} reported <b>{WeekRate}</b> detections per <b>100,000</b> citizens in the week to <b>{LatestResult}</b>. Weekly change is <b>{StdRelChange}</b> standard deviations.",
+        fieldInfos: [
+          {
+            fieldName: "LatestResult",
+            format: {
+              dateFormat: "day-short-month-year"
+            }
+          },
+          {
+            fieldName: "WeekRate",
+            format: {
+              places: 1
+            }
+          },
+          {
+            fieldName: "StdRelChange",
+            format: {
+              places: 1
+            }
+          }
+        ]
+    };
+
+    function getPopupDetails(feature) {
+      // var popDiv = document.createElement("div");
+      let popupText = "";
+      const att = feature.graphic.attributes;
+      if ((att.WeekRate, att.LatestResult, att.StdRelChange) == null) {
+        popupText = "Missing or incomplete data.";
+      } else {
+        popupText = "{LAD12NM_EDIT} reported <b>{WeekRate}</b> detections per 100,000 citizens in the week to {LatestResult}. Weekly change is <b>{StdRelChange}</b> standard deviations."
+        // popDiv.innerHTML =
+        //   feature.graphic.attributes.LAD12NM_EDIT +
+        //   " reported <b>" +
+        //   feature.graphic.attributes.WeekRate +
+        //   "</b> detections per 100,000 citizens in the week to <b>" +
+        //   feature.graphic.attributes.LatestResult +
+        //   ". Weekly change is <b>" +
+        //   feature.graphic.attributes.StdRelChange +
+        //    "</b> standard deviations."
+      }
+      return popupText;
+    };
+
+    const upOverTwoStd = {
+        type: "simple-fill", // autocasts as new SimpleFillSymbol()
+        color: "#D01C8B",
+        style: "solid",
+        outline: {
+            width: 0.2,
+            color: [255, 255, 255, 0.5]
+        }
+    };
+
+    const upOneToTwoStd = {
+        type: "simple-fill", // autocasts as new SimpleFillSymbol()
+        color: "#DF67B1",
+        style: "solid",
+        outline: {
+            width: 0.2,
+            color: [255, 255, 255, 0.5]
+        }
+    };
+
+    const upHalfToOneStd = {
+        type: "simple-fill", // autocasts as new SimpleFillSymbol()
+        color: "#EFB3D8",
+        style: "solid",
+        outline: {
+            width: 0.2,
+            color: [255, 255, 255, 0.5]
+        }
+    };
+
+    const withinHalfStd = {
+        type: "simple-fill", // autocasts as new SimpleFillSymbol()
+        color: "#FFFFFF",
+        style: "solid",
+        outline: {
+            width: 0.2,
+            color: [50, 50, 50, 0.4]
+        }
+    };
+
+    const downHalfToOneStd = {
+        type: "simple-fill", // autocasts as new SimpleFillSymbol()
+        color: "#C3E3B6",
+        style: "solid",
+        outline: {
+            width: 0.2,
+            color: [255, 255, 255, 0.5]
+        }
+    };
+
+    const downOneToTwoStd = {
+        type: "simple-fill", // autocasts as new SimpleFillSymbol()
+        color: "#88C76E",
+        style: "solid",
+        outline: {
+            width: 0.2,
+            color: [255, 255, 255, 0.5]
+        }
+    };
+
+    const downOverTwoStd = {
+        type: "simple-fill", // autocasts as new SimpleFillSymbol()
+        color: "#4DAC26",
+        style: "solid",
+        outline: {
+            width: 0.2,
+            color: [255, 255, 255, 0.5]
+        }
+    };
+
+    const renderer = {
+        type: "class-breaks", // autocasts as new ClassBreaksRenderer()
+        field: "HalfStdRelChangeLatestResult",
+        // normalizationField: "EDUCBASECY",
+        legendOptions: {
+            title: "Weekly change in stdev"
+        },
+        defaultSymbol: {
+            type: "simple-fill", // autocasts as new SimpleFillSymbol()
+            color: "black",
+            style: "backward-diagonal",
+            outline: {
+                width: 0.5,
+                color: [50, 50, 50, 0.6]
+            }
+        },
+        defaultLabel: "No data",
+        classBreakInfos: [{
+                minValue: 4,
+                maxValue: Number.MAX_SAFE_INTEGER,
+                symbol: upOverTwoStd,
+                label: "Increase over two"
+            },
+            {
+                minValue: 2,
+                maxValue: 3,
+                symbol: upOneToTwoStd,
+                label: "Increase one to two"
+            },
+            {
+                minValue: 1,
+                maxValue: 1,
+                symbol: upHalfToOneStd,
+                label: "Increase half to one"
+            },
+            {
+                minValue: 0,
+                maxValue: 0,
+                symbol: withinHalfStd,
+                label: "Within half"
+            },
+            {
+                minValue: -1,
+                maxValue: -1,
+                symbol: downHalfToOneStd,
+                label: "Decrease half to one"
+            },
+            {
+                minValue: -3,
+                maxValue: -2,
+                symbol: downOneToTwoStd,
+                label: "Decrease one to two"
+            },
+            {
+                minValue: Number.MIN_SAFE_INTEGER,
+                maxValue: -4,
+                symbol: downOverTwoStd,
+                label: "Decrease over two"
+            }
+        ]
+        // ,
+        // visualVariables: [
+        //     {
+        //       type: "opacity",
+        //       field: "WeekRate",
+        //       stops: [
+        //         { value: 0, opacity: 0.0, label: "$10,000" },
+        //         { value: 10, opacity: 1.0, label: "$100,000" }
+        //       ]
+        //     }
+        //   ]
+    };
+
+    // Create a symbol for drawing the point
+    var resultSymbol = {
+        type: "simple-marker", // autocasts as new SimpleMarkerSymbol()
+        color: [226, 119, 40],
+        outline: {
+            // autocasts as new SimpleLineSymbol()
+            color: [255, 255, 255],
+            width: 2
+        }
+    };
+    // Add the geometry and symbol to a new graphic
+    var polygonGraphic = new Graphic({
+        //  geometry: polygon,
+        symbol: resultSymbol
+    });
+
+    const url = "covid.geojson";
+
+    const geojsonLayer = new GeoJSONLayer({
+        url: url,
+        // outFields: ["*"],
+        popupTemplate: template,
+        renderer: renderer //optional
+    });
+
+    const map = new Map({
+        // basemap: "gray",
+        layers: [geojsonLayer]
+    });
+
+    const fixZoom = 9500000;
+
+    const view = new MapView({
+        container: "viewDiv",
+        center: [-1.75, 54],
+        zoom: fixZoom,
+        map: map,
+        spatialReference: {
+            wkid: 102100
+        }
+    });
+
+    view.popup.collapseEnabled = false;
+
+    view.constraints = {
+        minScale: fixZoom, // User cannot zoom out beyond a scale of 1:500,000
+        maxScale: fixZoom, // User can overzoom tiles
+        rotationEnabled: false // Disables map rotation
+    };
+
+    view.ui.remove('zoom');
+
+    // view.on("drag", function(evt){
+    //   // prevents panning with the mouse drag event
+    //   evt.stopPropagation();
+    // });
+
+    var searchWidget = new Search({
+        view: view,
+        includeDefaultSources: false,
+        autoSelect: true,
+        locationEnabled: false,
+        // resultGraphicEnabled: true,
+        // resultGraphic: resultSymbol,
+        allPlaceholder: "Local Authority",
+        zoomScale: 6,
+        sources: [{
+            layer: geojsonLayer,
+            searchFields: ["LAD12NM_EDIT"],
+            suggestionTemplate: "{LAD12NM_EDIT}",
+            exactMatch: false,
+            outFields: ["*"],
+            placeholder: "Local Authority search",
+            name: "Local Authority",
+            // zoomScale: 6,
+            // resultSymbol: {
+            //   type: "picture-marker", // autocasts as new PictureMarkerSymbol()
+            //   // url:
+            //   //   "https://developers.arcgis.com/javascript/latest/sample-code/widgets-search-multiplesource/live/images/senate.png",
+            //   height: 36
+            // }
+        }]
+    });
+
+    // Add the search widget to the top left corner of the view
+    view.ui.add(searchWidget, {
+        position: "top-right"
+    });
+
+    view.ui.add(searchWidget, {
+        position: "top-right"
+    });
+
+    var homeBtn = new Home({
+        view: view
+    });
+
+    // Add the home button to the top left corner of the view
+    view.ui.add(homeBtn, "top-left");
+
+    var legend = new Legend({
+        view: view,
+        layerInfos: [{
+            layer: geojsonLayer,
+            title: "Covid case change"
+        }],
+        container: document.createElement("div")
+    });
+
+    // Add widget to the bottom right corner of the view
+    // view.ui.add(legend, "bottom-right");
+    var legendExpand = new Expand({
+        view: view,
+        content: legend,
+        // expanded: true,
+        expandIconClass: 'esri-icon-handle-vertical'
+      });
+
+    // Check for mobile browsers
+    if (/Mobi/.test(navigator.userAgent) == false) {
+      legendExpand.expanded = true;
+    };
+
+// Add the expand instance to the ui
+
+    view.ui.add(legendExpand, "bottom-right");
+
+    });
+    </script>
+  </head>
+
+  <body>
+    <div id="viewDiv"></div>
+  </body>
+</html>
