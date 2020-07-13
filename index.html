@@ -87,14 +87,19 @@ require([
       } else {
         let changeText = "";
         let absChg = Math.abs(att.StdRelChange);
-        if (att.StdRelChange > 0) {
+        if (att.StdRelChange > 1) {
           changeText = "The new weekly average is <b>" + absChg + "</b> standard deviations above the previous week."
-        } else if (att.StdRelChange < 0) {
-          changeText = "The new weekly average is <b>" + absChg + "</b> standard deviations below the previous week."
+        } else if (att.StdRelChange == 1) {
+          changeText = "The new weekly average is <b>" + absChg + "</b> standard deviation below the previous week."
         } else if (att.StdRelChange == 0) {
           changeText = "The new weekly average is within one standard deviation of the previous week."
+        } else if (att.StdRelChange == -1) {
+          changeText = "The new weekly average is <b>" + absChg + "</b> standard deviation below the previous week."
+        } else if (att.StdRelChange < -1) {
+          changeText = "The new weekly average is <b>" + absChg + "</b> standard deviations below the previous week."
         }
-        popupText = "{LAD12NM_EDIT} reported <b>{WeekRate}</b> detections per 100,000 citizens in the week to {LatestResult}. " + changeText;
+        popupText = "{LAD12NM_EDIT} reported <b>{WeekRate}</b> detections per 100,000 citizens in the week to {LatestResult}. " + changeText +
+        " Last update: ";
         // popDiv.innerHTML =
         //   feature.graphic.attributes.LAD12NM_EDIT +
         //   " reported <b>" +
