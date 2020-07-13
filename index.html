@@ -86,10 +86,11 @@ require([
         popupText = "Missing or incomplete data.";
       } else {
         let changeText = "";
+        let absChg = Math.abs(att.StdRelChange);
         if (att.StdRelChange > 0) {
-          changeText = "The new weekly average is <b>{StdRelChange}</b> standard deviations above than the previous week."
+          changeText = "The new weekly average is <b>" + absChg + "</b> standard deviations above than the previous week."
         } else if (att.StdRelChange < 0) {
-          changeText = "The new weekly average is <b>{StdRelChange}</b> standard deviations below than the previous week."
+          changeText = "The new weekly average is <b>" + absChg + "</b> standard deviations below than the previous week."
         } else if (att.StdRelChange == 0) {
           changeText = "The new weekly average is within one standard deviation of the previous week."
         }
