@@ -85,7 +85,15 @@ require([
       if ((att.WeekRate, att.LatestResult, att.StdRelChange) == null) {
         popupText = "Missing or incomplete data.";
       } else {
-        popupText = "{LAD12NM_EDIT} reported <b>{WeekRate}</b> detections per 100,000 citizens in the week to {LatestResult}. The new daily average is <b>{StdRelChange}</b> standard deviations from the previous week."
+        let changeText = "";
+        if (att.StdRelChange > 0) {
+          changeText = "The new weekly average is <b>{StdRelChange}</b> standard deviations above than the previous week."
+        } else if (att.StdRelChange < 0) {
+          changeText = "The new weekly average is <b>{StdRelChange}</b> standard deviations below than the previous week."
+        } else if (att.StdRelChange == 0) {
+          changeText = "The new weekly average is within one standard deviation of the previous week."
+        }
+        popupText = "{LAD12NM_EDIT} reported <b>{WeekRate}</b> detections per 100,000 citizens in the week to {LatestResult}. " + changeText;
         // popDiv.innerHTML =
         //   feature.graphic.attributes.LAD12NM_EDIT +
         //   " reported <b>" +
